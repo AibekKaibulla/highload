@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: gateway
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ["gateway:8080"] }]
+  - job_name: poll-service
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ["poll-service:8081"] }]
+  - job_name: vote-service
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ["vote-service:8081"] }]

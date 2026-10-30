@@ -1,0 +1,96 @@
+# docker compose up --build -d
+#   gateway (public REST)      http://localhost:8080
+#   poll-service  gRPC :9091   REST :8091
+#   vote-service  gRPC :9092   REST :8092
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: polls
+      POSTGRES_USER: polls
+      POSTGRES_PASSWORD: polls
+    mem_limit: 512m
+    command: ["postgres", "-c", "max_connections=200"]
+    ports: ["5432:5432"]
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U polls -d polls"]
+      interval: 2s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    # Pure cache: no persistence. If Redis restarts, counters are rebuilt from Postgres.
+    mem_limit: 128m
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+
+  poll-service:
+    build:
+      context: .
+      args: { MODULE: poll-service }
+    mem_limit: 640m
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx384m"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/polls
+      SPRING_DATA_REDIS_HOST: redis
+    ports: ["9091:9090", "8091:8081"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  vote-service:
+    build:
+      context: .
+      args: { MODULE: vote-service }
+    mem_limit: 640m
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx384m"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/polls
+      SPRING_DATA_REDIS_HOST: redis
+    ports: ["9092:9090", "8092:8081"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  gateway:
+    build:
+      context: .
+      args: { MODULE: gateway }
+    mem_limit: 640m
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx384m"
+      BACKENDS_POLL_GRPC_TARGET: dns:///poll-service:9090
+      BACKENDS_POLL_REST_URL: http://poll-service:8081
+      BACKENDS_VOTE_GRPC_TARGET: dns:///vote-service:9090
+      BACKENDS_VOTE_REST_URL: http://vote-service:8081
+      AUTH_TEST_HEADER_ENABLED: "true"   # load tests send X-User-Id instead of a JWT
+      AUTH_DEV_ENDPOINTS: "true"         # /admin/settings and /dev/token for experiments
+    ports: ["8080:8080"]
+    depends_on: [poll-service, vote-service]
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    mem_limit: 256m
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+
+  grafana:                               # http://localhost:3000 -> dashboard "Polls & Voting"
+    image: grafana/grafana:11.2.2
+    mem_limit: 256m
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/polls.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3000:3000"]
+    depends_on: [prometheus]

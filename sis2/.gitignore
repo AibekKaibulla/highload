@@ -1,0 +1,9 @@
+target/
+.idea/
+*.iml
+.vscode/
+results/*.log
+results/*.out
+results/t*.row
+results/t*.json
+.github

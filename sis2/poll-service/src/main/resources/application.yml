@@ -1,0 +1,41 @@
+server:
+  port: 8081          # internal REST/JSON baseline (HTTP/1.1)
+grpc:
+  port: 9090          # internal gRPC (HTTP/2)
+
+spring:
+  application:
+    name: poll-service
+  threads:
+    virtual:
+      enabled: true
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  datasource:
+    url: jdbc:postgresql://localhost:5432/polls
+    username: polls
+    password: polls
+    hikari:
+      # Sized pool (Little's Law): poll creation is rare, 10 is plenty.
+      maximum-pool-size: 10
+      minimum-idle: 10
+      # Fail fast when the pool is exhausted (250 ms is Hikari's minimum) -> UNAVAILABLE.
+      connection-timeout: 250
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 50ms          # Redis answers in ~1 ms; anything slower is a problem
+      connect-timeout: 500ms
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+    tags:
+      application: ${spring.application.name}

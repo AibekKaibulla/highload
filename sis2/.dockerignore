@@ -1,0 +1,9 @@
+materials
+**/target
+.git
+.idea
+.vscode
+*.md
+*.txt
+loadtest
+results

@@ -1,0 +1,365 @@
+{
+ "uid": "polls",
+ "title": "Polls & Voting",
+ "schemaVersion": 39,
+ "refresh": "5s",
+ "time": {
+  "from": "now-15m",
+  "to": "now"
+ },
+ "panels": [
+  {
+   "type": "timeseries",
+   "title": "Gateway -> backend latency, logical call incl. retries (p50/p95/p99)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 9
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "histogram_quantile(0.5, sum by (le, protocol, method) (rate(gateway_backend_call_seconds_bucket[30s])))",
+     "legendFormat": "p50 {{protocol}} {{method}}"
+    },
+    {
+     "refId": "B",
+     "expr": "histogram_quantile(0.95, sum by (le, protocol, method) (rate(gateway_backend_call_seconds_bucket[30s])))",
+     "legendFormat": "p95 {{protocol}} {{method}}"
+    },
+    {
+     "refId": "C",
+     "expr": "histogram_quantile(0.99, sum by (le, protocol, method) (rate(gateway_backend_call_seconds_bucket[30s])))",
+     "legendFormat": "p99 {{protocol}} {{method}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Calls per second by outcome",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 9,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (protocol, method, outcome) (rate(gateway_backend_call_seconds_count[30s]))",
+     "legendFormat": "{{protocol}} {{method}} {{outcome}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Retries per second",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 9,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (protocol, method, reason) (rate(gateway_backend_retries_total[30s]))",
+     "legendFormat": "{{protocol}} {{method}} {{reason}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Attempts per logical call (retry amplification)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 17,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (protocol, method) (rate(gateway_backend_attempt_seconds_count[30s])) / sum by (protocol, method) (rate(gateway_backend_call_seconds_count[30s]))",
+     "legendFormat": "{{protocol}} {{method}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Avg body size per message (Protobuf vs JSON)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 17,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (protocol, method, direction) (rate(gateway_backend_payload_bytes_sum[1m])) / sum by (protocol, method, direction) (rate(gateway_backend_payload_bytes_count[1m]))",
+     "legendFormat": "{{protocol}} {{method}} {{direction}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Postgres pool: active / pending connections",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 25,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "hikaricp_connections_active",
+     "legendFormat": "active {{application}}"
+    },
+    {
+     "refId": "B",
+     "expr": "hikaricp_connections_pending",
+     "legendFormat": "pending {{application}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Injected faults (chaos) per second",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 25,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (application, type) (rate(chaos_injected_total[30s]))",
+     "legendFormat": "{{application}} {{type}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Vote safety counters",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 33,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "rate(votes_duplicates_total[30s])",
+     "legendFormat": "duplicates blocked by PK /s"
+    },
+    {
+     "refId": "B",
+     "expr": "rate(votes_redis_increment_failures_total[30s])",
+     "legendFormat": "redis HINCRBY failures /s"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Service-side REST latency p99 (internal baseline)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 33,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "histogram_quantile(0.99, sum by (le, application, uri) (rate(http_server_requests_seconds_bucket{uri=~\"/internal.*\"}[30s])))",
+     "legendFormat": "{{application}} {{uri}}"
+    }
+   ]
+  }
+ ]
+}
