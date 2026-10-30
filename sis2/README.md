@@ -61,7 +61,7 @@ sequenceDiagram
 
     C->>GW: POST /v1/polls (Idempotency-Key: K)
     GW->>PS: CreatePoll(key=K), deadline 100ms
-    PS->>PG: BEGIN; INSERT idempotency_keys, polls, options; COMMIT
+    PS->>PG: one transaction: INSERT idempotency_keys + polls + options, COMMIT
     PS--xGW: response lost (timeout)
     GW->>PS: retry CreatePoll(key=K) after backoff + jitter
     PS->>PG: key K already exists → read stored response
